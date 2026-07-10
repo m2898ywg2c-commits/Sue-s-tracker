@@ -17,6 +17,83 @@ const PCTS = [0.875, 0.9, 0.925, 0.95, 0.975, 0.85];
 const roundTo25 = (n) => Math.round(n / 2.5) * 2.5;
 const roundTo1 = (n) => Math.round(n);
 
+// which movement pattern each exercise belongs to, used to pick a pictogram
+const EXERCISE_ICON = {
+  db_squat: "squat",
+  rdl: "hinge",
+  hip_thrust: "hinge",
+  step_up: "squat",
+  glute_bridge: "hinge",
+  bird_dog: "core",
+  plank: "core",
+  db_bench: "push",
+  lat_pulldown: "pull",
+  incline_db_press: "push",
+  db_curl: "curl",
+  hammer_curl: "curl",
+  dead_bug: "core",
+  lateral_band_walk: "squat",
+  light_squat: "squat",
+  skierg_500: "cardio",
+  row_500: "cardio",
+  bike_2k: "cardio",
+};
+
+// simple original pictograms, one per movement pattern, drawn in the app's own colours
+// rather than sourced photos, so they load instantly, never break, and work offline
+function MovementIcon({ type }) {
+  const stroke = C.ink;
+  const fill = C.accent;
+  const common = { width: 40, height: 40, viewBox: "0 0 40 40", fill: "none" };
+
+  const icons = {
+    squat: (
+      <svg {...common}>
+        <circle cx="20" cy="8" r="4" fill={fill} />
+        <path d="M20 12 L20 20 M12 26 L20 20 L28 26 M14 34 L20 22 L26 34" stroke={stroke} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    hinge: (
+      <svg {...common}>
+        <circle cx="12" cy="10" r="4" fill={fill} />
+        <path d="M12 14 L22 22 M22 22 L32 18 M22 22 L18 34 M12 14 L8 26" stroke={stroke} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    push: (
+      <svg {...common}>
+        <circle cx="10" cy="20" r="4" fill={fill} />
+        <path d="M14 20 L26 20 M26 20 L34 14 M26 20 L34 26 M10 24 L10 34 M14 24 L18 34" stroke={stroke} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    pull: (
+      <svg {...common}>
+        <circle cx="20" cy="7" r="4" fill={fill} />
+        <path d="M20 11 L20 26 M20 15 L10 8 M20 15 L30 8 M20 26 L14 36 M20 26 L26 36" stroke={stroke} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    curl: (
+      <svg {...common}>
+        <circle cx="12" cy="8" r="4" fill={fill} />
+        <path d="M12 12 L12 30 M12 30 L20 30 M12 16 L22 16 L18 8" stroke={stroke} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    core: (
+      <svg {...common}>
+        <circle cx="8" cy="22" r="4" fill={fill} />
+        <path d="M12 22 L30 16 M16 22 L20 32 M24 19 L28 30" stroke={stroke} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    cardio: (
+      <svg {...common}>
+        <circle cx="14" cy="8" r="4" fill={fill} />
+        <path d="M14 12 L18 22 L12 26 L16 34 M18 22 L28 18 M14 12 L8 20" stroke={stroke} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  };
+
+  return icons[type] || null;
+}
+
 const mk = (id, name, sets, reps, note, query, increment = 2.5) => ({
   id,
   name,
@@ -797,23 +874,30 @@ export default function WorkoutTracker() {
               return (
                 <div key={ex.id} className="rounded-xl p-4 border-2" style={{ backgroundColor: C.card, borderColor: C.line }}>
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-lg leading-tight" style={{ color: C.ink }}>
-                          {ex.name}
-                        </h3>
-                        {pr && (
-                          <span className="flex items-center gap-0.5 text-[10px] font-extrabold px-1.5 py-0.5 rounded" style={{ backgroundColor: C.accent, color: "#FFFFFF" }}>
-                            <Flame size={10} /> PR
-                          </span>
-                        )}
+                    <div className="flex gap-3">
+                      {EXERCISE_ICON[ex.id] && (
+                        <div className="shrink-0 rounded-lg p-1.5" style={{ backgroundColor: C.page }}>
+                          <MovementIcon type={EXERCISE_ICON[ex.id]} />
+                        </div>
+                      )}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-lg leading-tight" style={{ color: C.ink }}>
+                            {ex.name}
+                          </h3>
+                          {pr && (
+                            <span className="flex items-center gap-0.5 text-[10px] font-extrabold px-1.5 py-0.5 rounded" style={{ backgroundColor: C.accent, color: "#FFFFFF" }}>
+                              <Flame size={10} /> PR
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm font-semibold mt-0.5" style={{ color: C.sub }}>
+                          {ex.type === "cardio" ? ex.target : `${ex.sets} sets × ${ex.reps} reps`}
+                        </p>
+                        <p className="text-sm mt-1 italic" style={{ color: C.note }}>
+                          {noteToShow}
+                        </p>
                       </div>
-                      <p className="text-sm font-semibold mt-0.5" style={{ color: C.sub }}>
-                        {ex.type === "cardio" ? ex.target : `${ex.sets} sets × ${ex.reps} reps`}
-                      </p>
-                      <p className="text-sm mt-1 italic" style={{ color: C.note }}>
-                        {noteToShow}
-                      </p>
                     </div>
                     <a href={ex.video} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-0.5 shrink-0" style={{ color: C.ink }}>
                       <Video size={20} />
