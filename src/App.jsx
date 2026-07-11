@@ -32,11 +32,11 @@ const EXERCISE_ICON = {
   db_curl: "curl",
   hammer_curl: "curl",
   dead_bug: "core",
-  lateral_band_walk: "squat",
-  light_squat: "squat",
   skierg_500: "cardio",
   row_500: "cardio",
-  bike_2k: "cardio",
+  engine_block1: "cardio",
+  engine_block2: "cardio",
+  engine_block3: "cardio",
 };
 
 // simple original pictograms, one per movement pattern, drawn in the app's own colours
@@ -114,6 +114,16 @@ const mkCardio = (id, name, note, target, query) => ({
   video: `https://www.youtube.com/results?search_query=${encodeURIComponent(query || name + " technique")}`,
 });
 
+// a 10-minute mixed block: cardio machine plus a movement, repeated for the full block, logged as rounds completed
+const mkAmrap = (id, name, note, query, target = "10 min AMRAP") => ({
+  id,
+  name,
+  note,
+  type: "amrap",
+  target,
+  video: `https://www.youtube.com/results?search_query=${encodeURIComponent(query || name + " technique")}`,
+});
+
 const CARDIO_NOTES = [
   "Baseline effort. Go hard but controlled and log your time, this is what you're chasing from here.",
   "Aim to match or shave a second or two off week 1.",
@@ -123,14 +133,23 @@ const CARDIO_NOTES = [
   "Deload. Easy, steady pace, this isn't about time this week.",
 ];
 
-function conditioning(weekIdx) {
+// SkiErg and Row 500m tacked onto the end of Lower Power and Upper Strength too, a short sharp finisher
+function finisherPair(weekIdx) {
   const note = CARDIO_NOTES[weekIdx];
   return [
     mkCardio("skierg_500", "SkiErg 500m", note, "500m", "skierg technique 500m"),
     mkCardio("row_500", "Row 500m", note, "500m", "rowing machine technique 500m Concept2"),
-    mkCardio("bike_2k", "Bike 2km", note, "2km", "stationary bike technique"),
   ];
 }
+
+const AMRAP_NOTES = [
+  "Baseline effort. Move at a pace you could hold for all three blocks, log how many rounds you get through.",
+  "Aim to match or beat week 1's rounds in each block.",
+  "Push for an extra round somewhere across the three blocks.",
+  "Same again, keep chasing rounds.",
+  "Peak week, this is the hardest the Engine Room gets.",
+  "Deload, easy pace, this isn't about rounds this week.",
+];
 
 function buildPlan(weekIdx, dbBenchBase, dbSquatBase, rdlBase, latPulldownBase) {
   const benchNum = parseFloat(dbBenchBase);
@@ -143,6 +162,7 @@ function buildPlan(weekIdx, dbBenchBase, dbSquatBase, rdlBase, latPulldownBase) 
   const rdl = rdlNum ? roundTo25(rdlNum * PCTS[weekIdx]) : null;
   const pd = pdNum ? roundTo25(pdNum * PCTS[weekIdx]) : null;
   const deload = weekIdx === 5;
+  const amrapNote = AMRAP_NOTES[weekIdx];
 
   const benchNote = bench ? `Work up to ~${bench}kg per dumbbell` : "Set your DB bench baseline in Settings";
   const squatNote = squat ? `Work up to ~${squat}kg, keep knees tracking over your toes` : "Set your squat baseline in Settings";
@@ -158,6 +178,7 @@ function buildPlan(weekIdx, dbBenchBase, dbSquatBase, rdlBase, latPulldownBase) 
       mk("glute_bridge", "Glute Bridge", 3, "15", "Bodyweight or light, squeeze glutes hard at the top", "glute bridge proper form", 1),
       mk("bird_dog", "Bird-Dog", 3, "10 per side", "Core and lower back friendly, no spinal loading, move slowly", "bird dog exercise technique", 1),
       mk("plank", "Plank", 3, "30 sec", "Brace, don't let hips sag or lower back arch", "plank correct form", 1),
+      ...finisherPair(weekIdx),
     ],
     upper: [
       mk("db_bench", "Dumbbell Bench Press", 4, "8", benchNote, "dumbbell bench press form", 1),
@@ -166,11 +187,27 @@ function buildPlan(weekIdx, dbBenchBase, dbSquatBase, rdlBase, latPulldownBase) 
       mk("db_curl", "Dumbbell Bicep Curl", 3, "12", "Elbows pinned to your sides, no swinging", "dumbbell bicep curl form", 1),
       mk("hammer_curl", "Hammer Curl", 3, "12", "Thumbs up throughout, targets the forearm and outer arm", "hammer curl form", 1),
       mk("dead_bug", "Dead Bug", 3, "10 per side", "Lower back stays flat on the floor the whole time, this is the cue that matters most", "dead bug exercise technique", 1),
+      ...finisherPair(weekIdx),
     ],
     engine: [
-      mk("lateral_band_walk", "Lateral Band Walk", 2, "10 steps each way", "Glute activation, very easy on knees and lower back, keep tension on the band throughout", "lateral band walk technique", 1),
-      mk("light_squat", "Light Goblet Squat (activation)", 2, "10", "Light weight, this is a warm-up for the engine work, not a strength set", "goblet squat technique", 1),
-      ...conditioning(weekIdx),
+      mkAmrap(
+        "engine_block1",
+        "Block 1: Row + Band Walk",
+        `Row 250m, then 10 lateral band walk steps each way. Repeat for the full 10 minutes. ${amrapNote}`,
+        "rowing machine technique 500m Concept2"
+      ),
+      mkAmrap(
+        "engine_block2",
+        "Block 2: SkiErg + Squat",
+        `SkiErg 250m, then 10 light goblet squats. Repeat for the full 10 minutes. ${amrapNote}`,
+        "skierg technique 500m"
+      ),
+      mkAmrap(
+        "engine_block3",
+        "Block 3: Bike + Band Walk",
+        `Bike 500m, then 10 lateral band walk steps each way. Repeat for the full 10 minutes. ${amrapNote}`,
+        "stationary bike technique"
+      ),
     ],
   };
 }
@@ -225,11 +262,11 @@ const COACH_TIPS = {
   db_curl: "Elbows pinned to your sides the whole rep, if you're swinging your torso to finish a rep, the weight's too heavy.",
   hammer_curl: "Thumbs up throughout, don't twist into a regular curl halfway through.",
   dead_bug: "Press your lower back into the floor and keep it there the entire set, that's more important than how far your arm and leg extend.",
-  lateral_band_walk: "Stay low in a slight squat, small controlled steps, keep tension on the band the whole way, don't let your knees collapse in.",
-  light_squat: "This is deliberately light, treat it as waking the muscles up before the engine work, not a strength set.",
   skierg_500: "Drive with your legs first, then finish with your arms, not the other way round.",
   row_500: "Legs, then hips, then arms on the drive, reverse it coming back.",
-  bike_2k: "Steady cadence beats sprinting and fading, find a pace you can hold the whole distance.",
+  engine_block1: "Keep the row smooth rather than explosive, you've got two more blocks to come. Stay low and controlled on the band walk, don't let your knees drift inward.",
+  engine_block2: "Same idea on the SkiErg, legs first, arms finish. Keep the squats light and controlled, this block's about rhythm, not load.",
+  engine_block3: "Steady cadence on the bike beats sprinting and fading. Same band walk cue as block one, small controlled steps, tension held throughout.",
 };
 
 const META_KEY = "sue-tracker-meta-v1";
@@ -237,7 +274,9 @@ const ARCHIVE_KEY = "sue-tracker-archive-v1";
 const NUTRITION_CHECKS_KEY = "sue-tracker-nutrition-v1";
 const logsKeyForBlock = (blockNum) => `sue-tracker-logs-block-${blockNum}`;
 const bodyKeyForBlock = (blockNum) => `sue-tracker-body-block-${blockNum}`;
+const notesKeyForBlock = (blockNum) => `sue-tracker-notes-block-${blockNum}`;
 const logKey = (week, session, exerciseId) => `w${week + 1}-${session}-${exerciseId}`;
+const dayNoteKey = (week, session) => `w${week + 1}-${session}`;
 
 function todayStr() {
   const d = new Date();
@@ -304,6 +343,20 @@ function isCardioPR(logs, weekIdx, sessionKey, exerciseId) {
   return true;
 }
 
+// more rounds completed in the 10 minutes counts as a PR for these blocks
+function isAmrapPR(logs, weekIdx, sessionKey, exerciseId) {
+  const current = logs[logKey(weekIdx, sessionKey, exerciseId)];
+  const currentRounds = parseFloat(current && current.rounds);
+  if (!currentRounds) return false;
+  for (let w = 0; w < 6; w++) {
+    if (w === weekIdx) continue;
+    const l = logs[logKey(w, sessionKey, exerciseId)];
+    const otherRounds = parseFloat(l && l.rounds);
+    if (otherRounds && otherRounds >= currentRounds) return false;
+  }
+  return true;
+}
+
 function suggestedWeight(logs, weekIdx, sessionKey, exerciseId, numSets, increment, isDeload) {
   for (let w = weekIdx - 1; w >= 0; w--) {
     const prevMax = maxSetWeight(getSets(logs, w, sessionKey, exerciseId, numSets));
@@ -318,7 +371,7 @@ function suggestedWeight(logs, weekIdx, sessionKey, exerciseId, numSets, increme
 function computeTonnage(logs, weekIdx, sessionKey, exercises) {
   let total = 0;
   exercises.forEach((ex) => {
-    if (ex.type === "cardio") return;
+    if (ex.type === "cardio" || ex.type === "amrap") return;
     if (String(ex.reps).toLowerCase().includes("sec")) return;
     const sets = getSets(logs, weekIdx, sessionKey, ex.id, ex.sets);
     sets.forEach((s) => {
@@ -403,6 +456,8 @@ function countBlockPRs(logsObj, bases) {
       plan[s.key].forEach((ex) => {
         if (ex.type === "cardio") {
           if (isCardioPR(logsObj, w, s.key, ex.id)) count++;
+        } else if (ex.type === "amrap") {
+          if (isAmrapPR(logsObj, w, s.key, ex.id)) count++;
         } else {
           if (isPR(logsObj, w, s.key, ex.id, ex.sets)) count++;
         }
@@ -518,6 +573,7 @@ export default function WorkoutTracker() {
   const [bodyLogs, setBodyLogs] = useState({});
   const [archive, setArchive] = useState([]);
   const [nutritionChecks, setNutritionChecks] = useState({});
+  const [dayNotes, setDayNotes] = useState({});
   const [loaded, setLoaded] = useState(false);
   const [savedFlash, setSavedFlash] = useState(null);
   const [activeTip, setActiveTip] = useState(null);
@@ -558,6 +614,10 @@ export default function WorkoutTracker() {
       try {
         const res = await storage.get(NUTRITION_CHECKS_KEY);
         if (res && res.value) setNutritionChecks(JSON.parse(res.value));
+      } catch (e) {}
+      try {
+        const res = await storage.get(notesKeyForBlock(loadedMeta.blockNum));
+        if (res && res.value) setDayNotes(JSON.parse(res.value));
       } catch (e) {}
       setLoaded(true);
     })();
@@ -605,8 +665,20 @@ export default function WorkoutTracker() {
     }
   }, []);
 
+  const persistNotes = useCallback(
+    async (next) => {
+      setDayNotes(next);
+      try {
+        await storage.set(notesKeyForBlock(meta.blockNum), JSON.stringify(next));
+      } catch (e) {
+        console.error("Could not save", e);
+      }
+    },
+    [meta.blockNum]
+  );
+
   const startNewBlock = async (newStartDate, newBases) => {
-    const nextArchive = [...archive, { blockNum: meta.blockNum, startDate: meta.startDate, ...newBasesFrom(meta), logs, bodyLogs }];
+    const nextArchive = [...archive, { blockNum: meta.blockNum, startDate: meta.startDate, ...newBasesFrom(meta), logs, bodyLogs, dayNotes }];
     setArchive(nextArchive);
     try {
       await storage.set(ARCHIVE_KEY, JSON.stringify(nextArchive));
@@ -617,6 +689,7 @@ export default function WorkoutTracker() {
     await persistMeta(newMeta);
     setLogs({});
     setBodyLogs({});
+    setDayNotes({});
     setWeekIdx(weekFromDate(newStartDate));
     setView("workout");
   };
@@ -626,7 +699,7 @@ export default function WorkoutTracker() {
   }
 
   const exportAllData = () => {
-    const payload = { meta, logs, bodyLogs, archive, nutritionChecks, exportedAt: new Date().toISOString() };
+    const payload = { meta, logs, bodyLogs, archive, nutritionChecks, dayNotes, exportedAt: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -647,12 +720,14 @@ export default function WorkoutTracker() {
     setBodyLogs(parsed.bodyLogs || {});
     setArchive(parsed.archive || []);
     setNutritionChecks(parsed.nutritionChecks || {});
+    setDayNotes(parsed.dayNotes || {});
     setWeekIdx(weekFromDate(parsed.meta.startDate));
     await storage.set(META_KEY, JSON.stringify(parsed.meta));
     await storage.set(logsKeyForBlock(parsed.meta.blockNum), JSON.stringify(parsed.logs || {}));
     await storage.set(bodyKeyForBlock(parsed.meta.blockNum), JSON.stringify(parsed.bodyLogs || {}));
     await storage.set(ARCHIVE_KEY, JSON.stringify(parsed.archive || []));
     await storage.set(NUTRITION_CHECKS_KEY, JSON.stringify(parsed.nutritionChecks || {}));
+    await storage.set(notesKeyForBlock(parsed.meta.blockNum), JSON.stringify(parsed.dayNotes || {}));
   };
 
   const plan = useMemo(
@@ -689,6 +764,10 @@ export default function WorkoutTracker() {
     if (ex.type === "cardio") {
       const l = logs[logKey(weekIdx, sessionKey, ex.id)];
       return !!(l && l.time);
+    }
+    if (ex.type === "amrap") {
+      const l = logs[logKey(weekIdx, sessionKey, ex.id)];
+      return !!(l && l.rounds);
     }
     return !!maxSetWeight(getSets(logs, weekIdx, sessionKey, ex.id, ex.sets));
   }).length;
@@ -861,15 +940,20 @@ export default function WorkoutTracker() {
               const key = logKey(weekIdx, sessionKey, ex.id);
               const entry = logs[key] || {};
               const isSaved = savedFlash === ex.id;
-              const pr = ex.type === "cardio" ? isCardioPR(logs, weekIdx, sessionKey, ex.id) : isPR(logs, weekIdx, sessionKey, ex.id, ex.sets);
+              const pr =
+                ex.type === "cardio"
+                  ? isCardioPR(logs, weekIdx, sessionKey, ex.id)
+                  : ex.type === "amrap"
+                  ? isAmrapPR(logs, weekIdx, sessionKey, ex.id)
+                  : isPR(logs, weekIdx, sessionKey, ex.id, ex.sets);
               const suggestion =
-                ex.type === "cardio" ? null : suggestedWeight(logs, weekIdx, sessionKey, ex.id, ex.sets, ex.increment || 1, weekIdx === 5);
+                ex.type === "strength" ? suggestedWeight(logs, weekIdx, sessionKey, ex.id, ex.sets, ex.increment || 1, weekIdx === 5) : null;
               const noteToShow = suggestion
                 ? weekIdx === 5
                   ? `Deload to ~${suggestion.suggested}kg, down from ${suggestion.prevWeight}kg in week ${suggestion.prevWeek}`
                   : `Aim for ~${suggestion.suggested}kg, up from ${suggestion.prevWeight}kg in week ${suggestion.prevWeek}`
                 : ex.note;
-              const setRows = ex.type === "cardio" ? [] : getSets(logs, weekIdx, sessionKey, ex.id, ex.sets);
+              const setRows = ex.type === "strength" ? getSets(logs, weekIdx, sessionKey, ex.id, ex.sets) : [];
 
               return (
                 <div key={ex.id} className="rounded-xl p-4 border-2" style={{ backgroundColor: C.card, borderColor: C.line }}>
@@ -892,7 +976,7 @@ export default function WorkoutTracker() {
                           )}
                         </div>
                         <p className="text-sm font-semibold mt-0.5" style={{ color: C.sub }}>
-                          {ex.type === "cardio" ? ex.target : `${ex.sets} sets × ${ex.reps} reps`}
+                          {ex.type === "cardio" || ex.type === "amrap" ? ex.target : `${ex.sets} sets × ${ex.reps} reps`}
                         </p>
                         <p className="text-sm mt-1 italic" style={{ color: C.note }}>
                           {noteToShow}
@@ -939,6 +1023,31 @@ export default function WorkoutTracker() {
                           value={entry.time || ""}
                           onChange={(e) => updateLog(ex.id, "time", e.target.value)}
                           placeholder="1:45"
+                          className="w-full mt-1 rounded-lg px-3 py-2 outline-none text-sm border-2 font-semibold"
+                          style={{ backgroundColor: "#FAF9FC", color: C.ink, borderColor: "#E0D8EC" }}
+                        />
+                      </div>
+                      <button
+                        onClick={() => saveEntry(ex.id)}
+                        className="h-[38px] px-3 rounded-lg font-bold text-sm flex items-center gap-1 transition"
+                        style={isSaved ? { backgroundColor: C.good, color: "#FFFFFF" } : { backgroundColor: C.ink, color: "#FFFFFF" }}
+                      >
+                        <Check size={16} />
+                        {isSaved ? "Saved" : "Save"}
+                      </button>
+                    </div>
+                  ) : ex.type === "amrap" ? (
+                    <div className="flex items-end gap-2 mt-3">
+                      <div className="flex-1">
+                        <label className="text-[10px] uppercase tracking-wide font-bold" style={{ color: C.sub }}>
+                          Rounds completed
+                        </label>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          value={entry.rounds || ""}
+                          onChange={(e) => updateLog(ex.id, "rounds", e.target.value)}
+                          placeholder="e.g. 6"
                           className="w-full mt-1 rounded-lg px-3 py-2 outline-none text-sm border-2 font-semibold"
                           style={{ backgroundColor: "#FAF9FC", color: C.ink, borderColor: "#E0D8EC" }}
                         />
@@ -1009,13 +1118,31 @@ export default function WorkoutTracker() {
               )}
             </div>
           )}
+
+          <div className="mt-4 rounded-xl p-4 border-2" style={{ backgroundColor: C.card, borderColor: C.line }}>
+            <p className="text-sm font-bold" style={{ color: C.ink }}>
+              Notes for today
+            </p>
+            <p className="text-xs mt-0.5 mb-2" style={{ color: C.sub }}>
+              How did it feel, anything to remember for next time, anything that niggled. This gets saved and can be
+              handed over when planning the next block.
+            </p>
+            <textarea
+              value={dayNotes[dayNoteKey(weekIdx, sessionKey)] || ""}
+              onChange={(e) => persistNotes({ ...dayNotes, [dayNoteKey(weekIdx, sessionKey)]: e.target.value })}
+              placeholder="e.g. knee felt a bit off on the goblet squats, dropped the weight slightly"
+              rows={3}
+              className="w-full rounded-lg px-3 py-2 outline-none text-sm border-2"
+              style={{ backgroundColor: "#FAF9FC", color: C.ink, borderColor: "#E0D8EC" }}
+            />
+          </div>
         </div>
       )}
 
       {view === "history" && <HistoryView logs={logs} onReset={() => persist({})} />}
       {view === "body" && <BodyView bodyLogs={bodyLogs} weekIdx={weekIdx} setWeekIdx={setWeekIdx} onSave={persistBody} />}
       {view === "nutrition" && <NutritionView checks={nutritionChecks} onSave={persistNutrition} />}
-      {view === "report" && <ReportView logs={logs} bodyLogs={bodyLogs} meta={meta} archive={archive} />}
+      {view === "report" && <ReportView logs={logs} bodyLogs={bodyLogs} meta={meta} archive={archive} dayNotes={dayNotes} />}
       {view === "settings" && (
         <SettingsView
           meta={meta}
@@ -1376,7 +1503,7 @@ function StatCard({ label, value, sub }) {
   );
 }
 
-function ReportView({ logs, bodyLogs, meta, archive }) {
+function ReportView({ logs, bodyLogs, meta, archive, dayNotes }) {
   const bases = { dbBenchBase: meta.dbBenchBase, dbSquatBase: meta.dbSquatBase, rdlBase: meta.rdlBase, latPulldownBase: meta.latPulldownBase };
   const tonnageSeries = useMemo(() => weeklyTonnageSeries(logs, bases), [logs, meta.dbBenchBase, meta.dbSquatBase, meta.rdlBase, meta.latPulldownBase]);
   const benchSeries = useMemo(() => weeklyTopLiftSeries(logs, "upper", "db_bench", 4), [logs]);
@@ -1482,6 +1609,35 @@ function ReportView({ logs, bodyLogs, meta, archive }) {
           </div>
         </>
       )}
+
+      {Object.values(dayNotes || {}).some((n) => n && n.trim()) && (
+        <>
+          <h3 className="font-display text-xl mt-6" style={{ color: C.ink }}>
+            SESSION NOTES
+          </h3>
+          <p className="text-xs mb-2" style={{ color: C.sub }}>
+            Everything logged this block, in one place, ready to hand over when planning the next one.
+          </p>
+          <div className="space-y-2">
+            {Array.from({ length: 6 }, (_, w) => w).map((w) =>
+              SESSIONS.map((s) => {
+                const note = dayNotes[dayNoteKey(w, s.key)];
+                if (!note || !note.trim()) return null;
+                return (
+                  <div key={`${w}-${s.key}`} className="rounded-lg p-3 border-2" style={{ backgroundColor: C.card, borderColor: C.line }}>
+                    <p className="text-xs font-bold" style={{ color: C.accent }}>
+                      Week {w + 1}, {s.label}
+                    </p>
+                    <p className="text-sm mt-0.5" style={{ color: C.ink }}>
+                      {note}
+                    </p>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -1499,6 +1655,9 @@ function HistoryView({ logs, onReset }) {
           if (ex.type === "cardio") {
             const l = logs[logKey(w, sessionKey, ex.id)];
             weeks.push(l && l.time ? l.time : "—");
+          } else if (ex.type === "amrap") {
+            const l = logs[logKey(w, sessionKey, ex.id)];
+            weeks.push(l && l.rounds ? `${l.rounds} rounds` : "—");
           } else {
             const sets = getSets(logs, w, sessionKey, ex.id, ex.sets).filter((s) => s.weight);
             weeks.push(sets.length ? sets.map((s) => `${s.weight}${s.reps ? `×${s.reps}` : ""}`).join(" / ") : "—");
